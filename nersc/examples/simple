@@ -1,0 +1,34 @@
+#!/bin/bash
+#SBATCH --qos=regular
+#SBATCH --constraint=cpu
+#SBATCH --nodes=1
+#SBATCH --cpus-per-task=64
+#SBATCH --time=04:00:00
+#SBATCH --license=scratch
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=agordeev
+#SBATCH --output=/pscratch/sd/a/agordeev/slurm/%x-%j
+#SBATCH --error=/pscratch/sd/a/agordeev/slurm/%x-%j
+
+export CONDA_PREFIX=/global/common/software/m2730/amg126
+export XDG_DATA_HOME=$CONDA_PREFIX/share
+conda init bash
+conda activate /global/common/software/m2730/amg126
+#module use /global/common/software/nersc/user/gsl-temp-modulefile
+module load gsl
+module load cpu
+
+export PMI_NO_FORK=1
+export PMI_NO_PREINITIALIZE=1
+export PMI_MMAP_SYNC_WAIT_TIME=300
+
+job=$NERSC_HOST-$SLURM_JOB_ID
+ntasks=$(( SLURM_JOB_NUM_NODES * SLURM_CPUS_ON_NODE ))
+
+srun run-events-wrapper  \
+  --nevents 100 \
+  --rankvar SLURM_PROCID \
+  --rankfmt "{:0${#ntasks}d}" \
+  --logfile $SCRATCH/logs/$job.log \
+  --checkpoint $SCRATCH/checkpoints/$job.pkl \
+  $SCRATCH/test_QCD_visc
